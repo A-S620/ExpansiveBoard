@@ -1,0 +1,221 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+    background-color: #e8f4ea;
+}
+
+#canvas {
+    position: absolute;
+    width: 100000px;
+    height: 100000px;
+    transform-origin: 0 0;
+    background-color: #f5f9ee;
+    background-image:
+            linear-gradient(rgba(142, 180, 134, 0.2) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(142, 180, 134, 0.2) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.item {
+    position: absolute;
+    cursor: move;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    overflow: hidden;
+    border: 2px solid #8eb486;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.item:hover {
+    transform: scale(1.01);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.text-item {
+    padding: 15px;
+    min-width: 100px;
+    min-height: 50px;
+    background-color: #fcfaee;
+    border: 2px solid #8eb486;
+    color: #5a7b5e;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.image-item {
+    padding: 8px;
+    background-color: white;
+}
+
+.image-item img {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+    border-radius: 5px;
+}
+
+.link-item {
+    padding: 12px;
+    background-color: #e8f4f7;
+    min-width: 100px;
+    border: 2px solid #7bb4c8;
+}
+
+.link-item a {
+    color: #4c7b90;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.link-item a:hover {
+    text-decoration: underline;
+}
+
+.controls {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    background-color: rgba(242, 244, 237, 0.95);
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    border: 2px solid #8eb486;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+button {
+    margin: 5px;
+    padding: 10px 15px;
+    border: none;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-text {
+    background-color: #8eb486;
+}
+
+.btn-text:hover {
+    background-color: #7a9d73;
+}
+
+.btn-image {
+    background-color: #7bb4c8;
+}
+
+.btn-image:hover {
+    background-color: #6999ad;
+}
+
+.btn-link {
+    background-color: #d0a978;
+}
+
+.btn-link:hover {
+    background-color: #bb9569;
+}
+
+.btn-save {
+    background-color: #86a6c5;
+}
+
+.btn-save:hover {
+    background-color: #718bb0;
+}
+
+.btn-load {
+    background-color: #a088b5;
+}
+
+.btn-load:hover {
+    background-color: #8b73a0;
+}
+
+.btn-reset {
+    background-color: #b58e86;
+}
+
+.btn-reset:hover {
+    background-color: #a07870;
+}
+
+.btn-clear {
+    background-color: #c17f7f;
+}
+
+.btn-clear:hover {
+    background-color: #a66d6d;
+}
+
+.btn-icon {
+    margin-right: 5px;
+    font-size: 16px;
+}
+
+.delete-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: #c17f7f;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 22px;
+    font-size: 14px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 10;
+    font-weight: bold;
+}
+
+.item:hover .delete-button {
+    opacity: 1;
+}
+
+.delete-button:hover {
+    transform: scale(1.1);
+    background-color: #a66d6d;
+}
+
+.resize-handle {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background-color: #8eb486;
+    border-radius: 50%;
+    bottom: 5px;
+    right: 5px;
+    cursor: nwse-resize;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+#file-input {
+    display: none;
+}
