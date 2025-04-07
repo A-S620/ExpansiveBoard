@@ -25,15 +25,18 @@ document.getElementById('file-input').addEventListener('change', handleImageUplo
 
 // Add paste event listener to the document
 document.addEventListener('paste', handlePaste);
+document.addEventListener('keydown', handleKeyDown);
 
 canvas.addEventListener('mousedown', startDrag);
 window.addEventListener('mousemove', drag);
 window.addEventListener('mouseup', endDrag);
 canvas.addEventListener('wheel', zoom);
 
-function addTextItem() {
-    const text = prompt('Enter your text:');
-    if (!text) return;
+function addTextItem(text = null) {
+    if (text === null) {
+        text = prompt('Enter your text:');
+        if (!text) return;
+    }
 
     const item = {
         id: nextId++,
@@ -47,6 +50,7 @@ function addTextItem() {
 
     items.push(item);
     renderItem(item);
+    return item;
 }
 
 function addLinkItem() {
@@ -68,24 +72,84 @@ function addLinkItem() {
 
     items.push(item);
     renderItem(item);
+    return item;
+}
+
+// Handle keyboard shortcuts
+function handleKeyDown(e) {
+    // Ctrl+D or Cmd+D for duplicate
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd' && selectedItem) {
+        e.preventDefault();
+        duplicateItem(selectedItem);
+    }
+}
+
+// Duplicate an item
+function duplicateItem(element) {
+    const id = parseInt(element.dataset.id);
+    const originalItem = items.find(item => item.id === id);
+
+    if (!originalItem) return;
+
+    // Create a deep copy of the item
+    const newItem = JSON.parse(JSON.stringify(originalItem));
+
+    // Assign a new ID
+    newItem.id = nextId++;
+
+    // Offset the position slightly for visibility
+    newItem.x += 20;
+    newItem.y += 20;
+
+    // Add to items array
+    items.push(newItem);
+
+    // Render the duplicated item
+    const newElement = renderItem(newItem);
+
+    // Select the new item
+    selectedItem = newElement;
+
+    return newItem;
 }
 
 // Handle paste event
 function handlePaste(e) {
-    // Check if the clipboard has any image data
-    const clipboardItems = e.clipboardData.items;
+    // Prevent paste if we're inside a text item already (let default paste work in contentEditable)
+    if (e.target.closest('.text-item')) {
+        return;
+    }
 
-    for (let i = 0; i < clipboardItems.length; i++) {
-        if (clipboardItems[i].type.indexOf('image') !== -1) {
+    // Get clipboard data
+    const clipboardData = e.clipboardData;
+
+    // Check if the clipboard has any image data
+    const items = clipboardData.items;
+
+    let hasHandledItem = false;
+
+    // First check for images
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
             // Get the image as a Blob
-            const blob = clipboardItems[i].getAsFile();
+            const blob = items[i].getAsFile();
 
             // Process the pasted image
             processPastedImage(blob);
 
             // Prevent the default paste behavior
             e.preventDefault();
-            return;
+            hasHandledItem = true;
+            break;
+        }
+    }
+
+    // If no image was found, check for text
+    if (!hasHandledItem) {
+        const text = clipboardData.getData('text/plain');
+        if (text && text.trim().length > 0) {
+            addTextItem(text);
+            e.preventDefault();
         }
     }
 }
@@ -195,6 +259,15 @@ function renderItem(item) {
         deleteItem(item.id);
     });
 
+    // Create duplicate button
+    const duplicateButton = document.createElement('div');
+    duplicateButton.className = 'duplicate-button';
+    duplicateButton.innerHTML = '+';
+    duplicateButton.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        duplicateItem(itemElement);
+    });
+
     // Create resize handle
     const resizeHandle = document.createElement('div');
     resizeHandle.className = 'resize-handle';
@@ -210,11 +283,13 @@ function renderItem(item) {
         itemElement.innerHTML = item.content;
         // Ensure delete button is not overwritten
         itemElement.appendChild(deleteButton);
+        itemElement.appendChild(duplicateButton);
     } else if (item.type === 'image') {
         const img = document.createElement('img');
         img.src = item.src;
         itemElement.appendChild(img);
         itemElement.appendChild(deleteButton);
+        itemElement.appendChild(duplicateButton);
     } else if (item.type === 'link') {
         const link = document.createElement('a');
         link.href = item.url;
@@ -222,10 +297,13 @@ function renderItem(item) {
         link.textContent = item.title;
         itemElement.appendChild(link);
         itemElement.appendChild(deleteButton);
+        itemElement.appendChild(duplicateButton);
     }
 
     itemElement.appendChild(resizeHandle);
     canvas.appendChild(itemElement);
+
+    return itemElement;
 }
 
 function deleteItem(id) {
@@ -351,13 +429,16 @@ function saveBoard() {
             // Filter out the delete button and resize handle from the content
             const deleteButton = element.querySelector('.delete-button');
             const resizeHandle = element.querySelector('.resize-handle');
+            const duplicateButton = element.querySelector('.duplicate-button');
 
             const tempElement = element.cloneNode(true);
             const tempDeleteButton = tempElement.querySelector('.delete-button');
             const tempResizeHandle = tempElement.querySelector('.resize-handle');
+            const tempDuplicateButton = tempElement.querySelector('.duplicate-button');
 
             if (tempDeleteButton) tempDeleteButton.remove();
             if (tempResizeHandle) tempResizeHandle.remove();
+            if (tempDuplicateButton) tempDuplicateButton.remove();
 
             item.content = tempElement.innerHTML;
         }

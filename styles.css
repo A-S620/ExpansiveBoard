@@ -215,6 +215,33 @@ button:hover {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     z-index: 10;
 }
+.duplicate-button {
+    position: absolute;
+    top: 5px;
+    right: 35px; /* Position it to the left of the delete button */
+    background-color: #8eb486;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 22px;
+    font-size: 18px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 10;
+    font-weight: bold;
+}
+
+.item:hover .duplicate-button {
+    opacity: 1;
+}
+
+.duplicate-button:hover {
+    transform: scale(1.1);
+    background-color: #7a9d73;
+}
 
 #file-input {
     display: none;
