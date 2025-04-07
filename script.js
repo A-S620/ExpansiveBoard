@@ -23,6 +23,9 @@ document.getElementById('reset-btn').addEventListener('click', resetView);
 document.getElementById('clear-btn').addEventListener('click', clearBoard);
 document.getElementById('file-input').addEventListener('change', handleImageUpload);
 
+// Add paste event listener to the document
+document.addEventListener('paste', handlePaste);
+
 canvas.addEventListener('mousedown', startDrag);
 window.addEventListener('mousemove', drag);
 window.addEventListener('mouseup', endDrag);
@@ -65,6 +68,69 @@ function addLinkItem() {
 
     items.push(item);
     renderItem(item);
+}
+
+// Handle paste event
+function handlePaste(e) {
+    // Check if the clipboard has any image data
+    const clipboardItems = e.clipboardData.items;
+
+    for (let i = 0; i < clipboardItems.length; i++) {
+        if (clipboardItems[i].type.indexOf('image') !== -1) {
+            // Get the image as a Blob
+            const blob = clipboardItems[i].getAsFile();
+
+            // Process the pasted image
+            processPastedImage(blob);
+
+            // Prevent the default paste behavior
+            e.preventDefault();
+            return;
+        }
+    }
+}
+
+// Process pasted image
+function processPastedImage(blob) {
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        const img = new Image();
+
+        img.onload = function() {
+            const maxWidth = 300;
+            const maxHeight = 300;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+                height = (maxWidth / width) * height;
+                width = maxWidth;
+            }
+
+            if (height > maxHeight) {
+                width = (maxHeight / height) * width;
+                height = maxHeight;
+            }
+
+            const item = {
+                id: nextId++,
+                type: 'image',
+                src: e.target.result,
+                x: -offsetX + window.innerWidth / 2 / scale - width / 2,
+                y: -offsetY + window.innerHeight / 2 / scale - height / 2,
+                width: width,
+                height: height
+            };
+
+            items.push(item);
+            renderItem(item);
+        };
+
+        img.src = e.target.result;
+    };
+
+    reader.readAsDataURL(blob);
 }
 
 function handleImageUpload(event) {
