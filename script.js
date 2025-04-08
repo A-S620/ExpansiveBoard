@@ -153,45 +153,146 @@ function handlePaste(e) {
         }
     }
 }
-
-// Process pasted image
-function processPastedImage(blob) {
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
+/**
+ * Compresses an image to reduce file size
+ * @param {string} dataUrl - The image data URL to compress
+ * @param {number} maxWidth - Maximum width for the compressed image
+ * @param {number} quality - JPEG quality (0-1)
+ * @returns {Promise<string>} - A promise that resolves with the compressed image data URL
+ */
+function compressImage(dataUrl, maxWidth = 800, quality = 0.7) {
+    return new Promise((resolve, reject) => {
         const img = new Image();
-
         img.onload = function() {
-            const maxWidth = 300;
-            const maxHeight = 300;
+            // Create a canvas for the compressed image
+            const canvas = document.createElement('canvas');
             let width = img.width;
             let height = img.height;
 
+            // Scale down if larger than maxWidth
             if (width > maxWidth) {
                 height = (maxWidth / width) * height;
                 width = maxWidth;
             }
 
-            if (height > maxHeight) {
-                width = (maxHeight / height) * width;
-                height = maxHeight;
-            }
+            canvas.width = width;
+            canvas.height = height;
 
-            const item = {
-                id: nextId++,
-                type: 'image',
-                src: e.target.result,
-                x: -offsetX + window.innerWidth / 2 / scale - width / 2,
-                y: -offsetY + window.innerHeight / 2 / scale - height / 2,
-                width: width,
-                height: height
-            };
+            // Draw and compress the image
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
 
-            items.push(item);
-            renderItem(item);
+            // Convert to JPEG with specified quality
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+
+            resolve(compressedDataUrl);
         };
 
-        img.src = e.target.result;
+        img.onerror = function() {
+            reject(new Error('Failed to load image for compression'));
+        };
+
+        img.src = dataUrl;
+    });
+}
+
+// Function to handle image uploads with compression
+async function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            // Compress the image
+            const compressedImage = await compressImage(e.target.result, 800, 0.7);
+
+            const img = new Image();
+            img.onload = function() {
+                const maxWidth = 300;
+                const maxHeight = 300;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = (maxWidth / width) * height;
+                    width = maxWidth;
+                }
+
+                if (height > maxHeight) {
+                    width = (maxHeight / height) * width;
+                    height = maxHeight;
+                }
+
+                const item = {
+                    id: nextId++,
+                    type: 'image',
+                    src: compressedImage, // Use compressed image
+                    x: -offsetX + window.innerWidth / 2 / scale - width / 2,
+                    y: -offsetY + window.innerHeight / 2 / scale - height / 2,
+                    width: width,
+                    height: height,
+                    imageSaved: true
+                };
+
+                items.push(item);
+                renderItem(item);
+            };
+            img.src = compressedImage;
+        } catch (error) {
+            console.error('Error compressing image:', error);
+            alert('Error processing image. Please try again with a different image.');
+        }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = ''; // Reset file input
+}
+
+// Process pasted image
+function processPastedImage(blob) {
+    const reader = new FileReader();
+
+    reader.onload = async function(e) {
+        try {
+            // Compress the pasted image
+            const compressedImage = await compressImage(e.target.result, 800, 0.7);
+
+            const img = new Image();
+            img.onload = function() {
+                const maxWidth = 300;
+                const maxHeight = 300;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = (maxWidth / width) * height;
+                    width = maxWidth;
+                }
+
+                if (height > maxHeight) {
+                    width = (maxHeight / height) * width;
+                    height = maxHeight;
+                }
+
+                const item = {
+                    id: nextId++,
+                    type: 'image',
+                    src: compressedImage, // Use compressed image
+                    x: -offsetX + window.innerWidth / 2 / scale - width / 2,
+                    y: -offsetY + window.innerHeight / 2 / scale - height / 2,
+                    width: width,
+                    height: height,
+                    imageSaved: true
+                };
+
+                items.push(item);
+                renderItem(item);
+            };
+            img.src = compressedImage;
+        } catch (error) {
+            console.error('Error compressing pasted image:', error);
+            alert('Error processing pasted image.');
+        }
     };
 
     reader.readAsDataURL(blob);
@@ -420,17 +521,16 @@ function clearBoard() {
 }
 
 function saveBoard() {
+    // Ask user if they want to include images (which make files large)
+    const includeImages = confirm('Include images in the save file? (Choosing "No" will make the file smaller, but images will need to be re-added later)');
+
     // Update text content for editable items
     const textElements = document.querySelectorAll('.text-item');
     textElements.forEach(element => {
         const id = parseInt(element.dataset.id);
         const item = items.find(item => item.id === id);
         if (item) {
-            // Filter out the delete button and resize handle from the content
-            const deleteButton = element.querySelector('.delete-button');
-            const resizeHandle = element.querySelector('.resize-handle');
-            const duplicateButton = element.querySelector('.duplicate-button');
-
+            // Clone the element to get content without control buttons
             const tempElement = element.cloneNode(true);
             const tempDeleteButton = tempElement.querySelector('.delete-button');
             const tempResizeHandle = tempElement.querySelector('.resize-handle');
@@ -444,14 +544,50 @@ function saveBoard() {
         }
     });
 
+    // Create a clean version of the items array for saving
+    const itemsToSave = items.map(item => {
+        // Create a copy of the item
+        const cleanItem = {...item};
+
+        // Handle image items differently based on user choice
+        if (item.type === 'image' && !includeImages) {
+            // If not including images, replace src with a placeholder
+            cleanItem.src = null;
+            cleanItem.imageSaved = false;
+        } else if (item.type === 'image' && includeImages) {
+            // Optionally compress the image before saving
+            cleanItem.imageSaved = true;
+        }
+
+        return cleanItem;
+    });
+
+    // Create board data object
     const boardData = {
-        items: items,
-        nextId: nextId
+        items: itemsToSave,
+        nextId: nextId,
+        version: '1.0', // Adding a version number for future compatibility
+        savedAt: new Date().toISOString(),
+        includesImages: includeImages
     };
 
+    // Convert to JSON string
     const dataStr = JSON.stringify(boardData);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
 
+    // Show file size information
+    const fileSizeKB = Math.round(dataStr.length / 1024);
+    const fileSizeMB = (fileSizeKB / 1024).toFixed(2);
+
+    console.log(`File size: ${fileSizeMB} MB (${fileSizeKB} KB)`);
+
+    // If the file is very large, confirm with the user
+    if (fileSizeKB > 5000) { // 5MB warning
+        const continueWithLargeFile = confirm(`Warning: The save file is large (${fileSizeMB} MB). This may cause performance issues. Continue?`);
+        if (!continueWithLargeFile) return;
+    }
+
+    // Create data URI and trigger download
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     const exportName = 'vision_board_' + new Date().toISOString().slice(0,10) + '.json';
 
     const linkElement = document.createElement('a');
@@ -473,12 +609,24 @@ function loadBoard() {
             try {
                 const boardData = JSON.parse(event.target.result);
 
+                // Check for missing images
+                const hasMissingImages = boardData.items.some(item =>
+                    item.type === 'image' && item.imageSaved === false);
+
+                if (hasMissingImages) {
+                    alert('Note: Some images were not saved with this board and will need to be re-added.');
+                }
+
                 // Clear existing items
                 items = [];
                 canvas.innerHTML = '';
 
                 // Load saved items
-                items = boardData.items;
+                items = boardData.items.filter(item => {
+                    // Filter out image items that weren't saved
+                    return !(item.type === 'image' && item.imageSaved === false);
+                });
+
                 nextId = boardData.nextId || items.length + 1;
 
                 // Render all items
